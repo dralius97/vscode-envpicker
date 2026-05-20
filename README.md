@@ -1,3 +1,5 @@
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/CandraJulius.envpicker)](https://marketplace.visualstudio.com/items?itemName=CandraJulius.envpicker)
+
 # envpicker
 
 A simple VSCode extension for managing multiple `.env` files in your project.
