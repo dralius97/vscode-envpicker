@@ -4,7 +4,8 @@ import * as path from 'path';
 export function activate(context: vscode.ExtensionContext) {
 	const usersFolder = vscode.workspace.workspaceFolders;
 	if(!usersFolder) {
-		throw new Error("Active folder doesn't exist");
+		vscode.window.showErrorMessage('Please open the folder or workspace before init');
+		return;
 	}
 	const userBasePath = usersFolder[0].uri.fsPath;
 	const libsPath = path.join(userBasePath, '.env-libs');
@@ -19,6 +20,11 @@ export function activate(context: vscode.ExtensionContext) {
 	statusBar.command = 'envpicker.pickenv';
 	statusBar.show();
     if (activeEnv) {
+		const activeEnvPath = path.join(libsPath, `.env.${activeEnv}`);
+		if(!fs.existsSync(activeEnvPath)){
+		    vscode.window.showWarningMessage(`Environment file ".env.${activeEnv}" is missing from .env-libs.`);
+		}
+
 		if (activeEnv === 'production') {
 			statusBar.text = `$(warning)$(gear~spin) ENV: ${activeEnv}`;
 		}else{
@@ -49,15 +55,21 @@ export function activate(context: vscode.ExtensionContext) {
 	        const gitIgnoreFile = fs.readFileSync(gitIgnorePath,'utf-8');
 	        const ignoredList = gitIgnoreFile.split('\n');
 
-	        if(!ignoredList.includes('.env-libs')){
+			const regexEnvLibs = /^\.env\-libs\r?$/m;
+			const regexEnv = /^\.env\r?$/m;
+
+	        if(!ignoredList.some(v=>regexEnvLibs.test(v))){
 	            ignoredList.push('.env-libs');
 	        }
-            if(!ignoredList.includes('.env')) {
+            if(!ignoredList.some(v=>regexEnv.test(v))) {
                 ignoredList.push('.env');
             }
             const editedFile = ignoredList.join('\n');
             fs.writeFileSync(gitIgnorePath, editedFile);
 	    }
+
+
+		vscode.window.showInformationMessage('EPicker: Initialized successfully!');
 	});
 
 	context.subscriptions.push(init);
@@ -72,13 +84,18 @@ export function activate(context: vscode.ExtensionContext) {
         const envDict: Record<string, string> = {};
 
         for(const file of envFileList){
-            const key = file.split('.env.')[1];
-            console.log(file);
-            if(key){
+			const match = file.match(/^\.env\.(.+)$/);
+            if(match && match[1]){
+				const key = match[1];
                 envSelection.push(key);
                 envDict[key] = file;
             }
         }
+
+		if(envSelection.length === 0) {
+		    vscode.window.showErrorMessage('No environment files found in .env-libs');
+		    return;
+		}
 
 		const selected = await vscode.window.showQuickPick(
 	        envSelection,
@@ -87,8 +104,13 @@ export function activate(context: vscode.ExtensionContext) {
 
         
 		if(selected){
-            context.workspaceState.update('activeEnv', selected);
-            fs.copyFileSync(path.join(libsPath, envDict[selected]),path.join(userBasePath,'.env'));
+			try {
+				fs.copyFileSync(path.join(libsPath, envDict[selected]),path.join(userBasePath,'.env'));
+				context.workspaceState.update('activeEnv', selected);
+			}catch(e){
+				vscode.window.showErrorMessage(`Failed to activate environment: ${e}`);
+    			return;
+			}
             
 			if (selected === 'production') {
 				statusBar.text = `$(warning)$(gear~spin) ENV: ${selected}`;
