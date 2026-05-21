@@ -8,14 +8,18 @@
   "name": "envpicker",
   "displayName": "envpicker",
   "description": "envpicker",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onStartupFinished","onCommand:envpicker.envinit", "onCommand:envpicker.pickenv"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:envpicker.envinit",
+    "onCommand:envpicker.pickenv"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
